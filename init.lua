@@ -101,6 +101,12 @@ do
   -- Set to true if you have a Nerd Font installed and selected in the terminal
   vim.g.have_nerd_font = false
 
+  -- Disable unused language providers to silence :checkhealth warnings
+  vim.g.loaded_node_provider = 0
+  vim.g.loaded_perl_provider = 0
+  vim.g.loaded_python3_provider = 0
+  vim.g.loaded_ruby_provider = 0
+
   -- [[ Setting options ]]
   --  See `:help vim.o`
   -- NOTE: You can change these options as you wish!
@@ -382,18 +388,22 @@ do
   -- change the command under that to load whatever the name of that colorscheme is.
   --
   -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-  vim.pack.add { gh 'folke/tokyonight.nvim' }
+  vim.pack.add { gh 'ellisonleao/gruvbox.nvim' }
   ---@diagnostic disable-next-line: missing-fields
-  require('tokyonight').setup {
-    styles = {
-      comments = { italic = false }, -- Disable italics in comments
+  require('gruvbox').setup {
+    contrast = 'hard', -- can be 'hard', 'soft' or empty string for default
+    italic = {
+      strings = false,
+      comments = false,
+      operators = false,
+      folds = false,
     },
   }
 
   -- Load the colorscheme here.
-  -- Like many other themes, this one has different styles, and you could load
-  -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-  vim.cmd.colorscheme 'tokyonight-night'
+  -- Gruvbox also ships a light background variant; set `vim.o.background = 'light'`
+  -- before this line if you want that instead.
+  vim.cmd.colorscheme 'gruvbox'
 
   -- Highlight todo, notes, etc in comments
   vim.pack.add { gh 'folke/todo-comments.nvim' }
@@ -444,6 +454,19 @@ do
   -- cursor location to LINE:COLUMN
   ---@diagnostic disable-next-line: duplicate-set-field
   statusline.section_location = function() return '%2l:%-2v' end
+
+  -- Live clock in the statusline (HH:MM), redrawn every second even when idle
+  local original_section_fileinfo = statusline.section_fileinfo
+  ---@diagnostic disable-next-line: duplicate-set-field
+  statusline.section_fileinfo = function(args)
+    local original = original_section_fileinfo(args)
+    return original .. '  ' .. os.date '%H:%M'
+  end
+  vim.uv.new_timer():start(
+    0,
+    1000,
+    vim.schedule_wrap(function() vim.cmd.redrawstatus() end)
+  )
 
   -- ... and there is more!
   --  Check out: https://github.com/nvim-mini/mini.nvim
@@ -692,16 +715,26 @@ do
   --  See `:help lsp-config` for information about keys and how to configure
   ---@type table<string, vim.lsp.Config>
   local servers = {
-    -- clangd = {},
-    -- gopls = {},
-    -- pyright = {},
-    -- rust_analyzer = {},
-    --
-    -- Some languages (like typescript) have entire language plugins that can be useful:
-    --    https://github.com/pmizio/typescript-tools.nvim
-    --
-    -- But for many setups, the LSP (`ts_ls`) will work just fine
-    -- ts_ls = {},
+    basedpyright = {},
+    ruff = {},
+    bashls = {},
+    gopls = {},
+    rust_analyzer = {},
+    jsonls = {},
+    yamlls = {},
+    html = {},
+    cssls = {},
+    ts_ls = {},
+    dockerls = {},
+    docker_compose_language_service = {},
+    taplo = {},
+    lemminx = {},
+    powershell_es = {},
+    clangd = {},
+
+    -- These need external setup before they'll start cleanly:
+    -- homeassistant = {}, -- requires a Home Assistant token
+    -- arduino_language_server = {}, -- requires arduino-cli configured
 
     stylua = {}, -- Used to format Lua code
 
@@ -904,8 +937,15 @@ do
   vim.pack.add { { src = gh 'nvim-treesitter/nvim-treesitter', version = 'main' } }
 
   -- Ensure basic parsers are installed
-  local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
+  local parsers = {
+    'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc',
+    'python', 'json', 'yaml', 'go', 'rust', 'css', 'javascript', 'powershell', 'cpp', 'arduino',
+    'dockerfile', 'toml', 'xml', 'sql', 'jinja', 'jinja_inline',
+  }
   require('nvim-treesitter').install(parsers)
+
+  -- Use the xml parser for xslt files
+  vim.treesitter.language.register('xml', 'xslt')
 
   ---@param buf integer
   ---@param language string
@@ -966,7 +1006,7 @@ do
   --  Here are some example plugins that I've included in the Kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
-  -- require 'kickstart.plugins.debug'
+  require 'kickstart.plugins.debug'
   -- require 'kickstart.plugins.indent_line'
   -- require 'kickstart.plugins.lint'
   -- require 'kickstart.plugins.autopairs'

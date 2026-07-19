@@ -42,6 +42,7 @@ require('mason-nvim-dap').setup {
   ensure_installed = {
     -- Update this to ensure that you have the debuggers for the langs you want
     'delve',
+    'bash-debug-adapter',
   },
 }
 
@@ -91,5 +92,37 @@ require('dap-go').setup {
     -- On Windows delve must be run attached or it crashes.
     -- See https://github.com/leoluz/nvim-dap-go/blob/main/README.md#configuring
     detached = vim.fn.has 'win32' == 0,
+  },
+}
+
+-- Bash debugging via bashdb (installed by mason as `bash-debug-adapter`)
+-- See https://github.com/mfussenegger/nvim-dap/wiki/Debug-Adapter-installation#bash
+local bashdb_dir = vim.fn.stdpath 'data' .. '/mason/packages/bash-debug-adapter/extension/bashdb_dir'
+
+dap.adapters.bashdb = {
+  type = 'executable',
+  command = vim.fn.exepath 'bash-debug-adapter',
+  name = 'bashdb',
+}
+
+dap.configurations.sh = {
+  {
+    type = 'bashdb',
+    request = 'launch',
+    name = 'Launch file',
+    showDebugOutput = true,
+    pathBashdb = bashdb_dir .. '/bashdb',
+    pathBashdbLib = bashdb_dir,
+    trace = true,
+    file = '${file}',
+    program = '${file}',
+    cwd = '${workspaceFolder}',
+    pathCat = 'cat',
+    pathBash = '/bin/bash',
+    pathMkfifo = 'mkfifo',
+    pathPkill = 'pkill',
+    args = {},
+    env = {},
+    terminalKind = 'integrated',
   },
 }
